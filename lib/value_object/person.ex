@@ -1,14 +1,8 @@
 defmodule DddElixir.ValueObject.Person do
-  use Ecto.Schema
-  import Ecto.Changeset
+  use Construct
 
-  @fields [:name, :year_of_birth]
-
-  @primary_key false
-  embedded_schema do
+  structure do
     field :name, :string
     field :year_of_birth, :integer
   end
-
-  def changeset(person \\ %__MODULE__{}, data), do: cast(person, data, @fields)
 end

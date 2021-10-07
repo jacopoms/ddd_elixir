@@ -6,17 +6,19 @@ defmodule DddElixir.ValueObject.MovieTests do
   alias DddElixir.ValueObject.Person
   alias DddElixir.ValueObject.Title
 
+  require DddElixir.Enum.Genre, as: Genre
+
   test "can make a movie" do
     assert {:ok, movie} =
              Movie.make(%{
                title: %{title: "Batman", language: "english"},
                length: %{minutes: 125},
-               genre: :action,
+               genre: "action",
                director: %{name: "Christopher Nolan", year_of_birth: 1970},
                cast: []
              })
 
-    assert :action == movie.genre
+    assert Genre.Action == movie.genre
     assert %Duration{minutes: 125} == movie.length
     assert %Person{name: "Christopher Nolan", year_of_birth: 1970} == movie.director
     assert %Title{title: "Batman", language: "english"} == movie.title
@@ -28,11 +30,11 @@ defmodule DddElixir.ValueObject.MovieTests do
              Movie.make(%{
                title: %{title: "Batman", language: "english"},
                length: %{minutes: 125},
-               genre: :action,
+               genre: "action",
                cast: []
              })
 
-    assert errors == [{:director, {"can't be blank", [validation: :required]}}]
+    assert errors == %{director: :missing}
   end
 
   test "cannot make Batman a romantic movie" do
@@ -40,11 +42,11 @@ defmodule DddElixir.ValueObject.MovieTests do
              Movie.make(%{
                title: %{title: "Batman", language: "english"},
                length: %{minutes: 125},
-               genre: :romance,
+               genre: "romance",
                director: %{name: "Christopher Nolan", year_of_birth: 1970},
                cast: []
              })
 
-    assert [{:genre, {"is invalid", _}}] = errors
+    assert errors == %{genre: :invalid}
   end
 end
