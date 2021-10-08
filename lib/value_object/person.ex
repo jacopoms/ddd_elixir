@@ -1,14 +1,9 @@
-defmodule DddElixir.ValueObject.Person do
-  use Ecto.Schema
-  import Ecto.Changeset
+defmodule Person do
+  @type t :: %__MODULE__{name: String.t(), year_of_birth: pos_integer()}
 
-  @fields [:name, :year_of_birth]
+  defstruct [:name, :year_of_birth]
 
-  @primary_key false
-  embedded_schema do
-    field :name, :string
-    field :year_of_birth, :integer
+  def new(name, year_of_birth) when year_of_birth > 1900 and year_of_birth < 2021 do
+    %__MODULE__{name: name, year_of_birth: year_of_birth}
   end
-
-  def changeset(person \\ %__MODULE__{}, data), do: cast(person, data, @fields)
 end
