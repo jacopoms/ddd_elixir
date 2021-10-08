@@ -6,24 +6,18 @@ defmodule Screenings do
     {:ok, screenings}
   end
 
+  def start_link(screenings) do
+    GenServer.start_link(__MODULE__, screenings, name: __MODULE__)
+  end
+
   def get(screening) do
-    GenServer.call(Screenings, {:get, screening})
+    GenServer.call(__MODULE__, {:get, screening})
   end
 
   @impl true
   def handle_call({:get, screening}, _from, screenings) do
     {:reply, Map.fetch(screenings, screening), screenings}
   end
-
-#   @impl true
-#   def handle_cast({:create, name}, names) do
-#     if Map.has_key?(names, name) do
-#       {:noreply, names}
-#     else
-#       {:ok, bucket} = KV.Bucket.start_link([])
-#       {:noreply, Map.put(names, name, bucket)}
-#     end
-#   end
 end
 
 defmodule ReserveSeats do
@@ -53,7 +47,7 @@ defmodule DDDElixir.CommandHandlerTest do
   use ExUnit.Case
 
   test "customer reservation works" do
-    GenServer.start_link(Screenings, %{1 => %Screening{seats: [1, 2, 3, 4]}})
+    Screenings.start_link(%{1 => %Screening{seats: [1, 2, 3, 4]}})
     command = %ReserveSeats{customer: 123, seats: [1, 2], screening: 1}
 
     assert :ok = CommandHandler.handle(command)
