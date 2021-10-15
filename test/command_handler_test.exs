@@ -122,7 +122,56 @@ defmodule CommandHandler do
   end
 end
 
-defmodule DDDElixir.CommandHandlerTest do
+defmodule ReservationReadModel do
+  use GenServer
+
+  # Public API
+
+  def start_link() do
+    GenServer.start_link(__MODULE__, [], name: __MODULE__)
+  end
+
+  def available_seats_for_screening(screening_id) do
+    GenServer.call(__MODULE__, {:available_seats_for_screening, screening_id})
+  end
+
+  def project(event) do
+    GenServer.call(__MODULE__, {:project_event, event})
+  end
+
+  # Callback functions
+
+  @impl true
+  def init(_) do
+    {:ok, %{}}
+  end
+
+  @impl true
+  def handle_call(
+        {:project_event, %SeatsReserved{aggregate_id: screening_id, customer: _, seats: seats}},
+        _from,
+        reservations
+      ) do
+    current_seats = Map.get(reservations, screening_id)
+    reservations = Map.put(reservations, screening_id, current_seats -- seats)
+    {:reply, :ok, reservations}
+  end
+
+  def handle_call(
+        {:project_event,
+         %ScreeningCreated{aggregate_id: screening_id, show_time: _, seats: seats}},
+        _from,
+        reservations
+      ) do
+    {:reply, :ok, %{screening_id => seats}}
+  end
+
+  def handle_call({:available_seats_for_screening, screening_id}, _from, reservations) do
+    {:reply, Map.get(reservations, screening_id), reservations}
+  end
+end
+
+defmodule DDDElixir.CqrsTest do
   use ExUnit.Case
 
   test "can reserve free seats" do
@@ -212,6 +261,21 @@ defmodule DDDElixir.CommandHandlerTest do
 
     refute %SeatsReserved{aggregate_id: 1, seats: [1, 2], customer: 123} ==
              EventStore.list_events() |> List.last()
+  end
+
+  test "customer can see available seats" do
+    ReservationReadModel.start_link()
+
+    ReservationReadModel.project(%ScreeningCreated{
+      aggregate_id: 1,
+      seats: [1, 2, 3, 4, 5, 6],
+      show_time: DateTime.add(DateTime.utc_now(), 5 * 60)
+    })
+
+    ReservationReadModel.project(%SeatsReserved{aggregate_id: 1, seats: [1, 2], customer: 123})
+    ReservationReadModel.project(%SeatsReserved{aggregate_id: 1, seats: [3, 4], customer: 456})
+
+    assert [5, 6] = ReservationReadModel.available_seats_for_screening(1)
   end
 
   defp given(events) do
