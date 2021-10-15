@@ -68,6 +68,10 @@ defmodule EventStore do
     GenServer.call(__MODULE__, {:publish, event})
   end
 
+  def list_events() do
+    GenServer.call(__MODULE__, :list_events)
+  end
+
   # Callback functions
 
   @impl true
@@ -78,6 +82,11 @@ defmodule EventStore do
   @impl true
   def handle_call({:get_by_aggregate_id, aggregate_id}, _from, events) do
     {:reply, Enum.filter(events, fn %{aggregate_id: id} -> id == aggregate_id end), events}
+  end
+
+  @impl true
+  def handle_call(:list_events, _from, events) do
+    {:reply, events, events}
   end
 
   def handle_call({:publish, event}, _from, events) do
@@ -133,6 +142,9 @@ defmodule DDDElixir.CommandHandlerTest do
     }
 
     assert :ok = CommandHandler.handle(command)
+
+    assert %SeatsReserved{aggregate_id: 1, seats: [1, 2], customer: 123} =
+             EventStore.list_events() |> List.last()
   end
 
   test "cannot reserve nonexisting seats" do
@@ -152,6 +164,9 @@ defmodule DDDElixir.CommandHandlerTest do
     }
 
     assert {:error, :seats_not_available} = CommandHandler.handle(command)
+
+    refute %SeatsReserved{aggregate_id: 1, seats: [42], customer: 123} ==
+             EventStore.list_events() |> List.last()
   end
 
   test "cannot reserve already taken seats" do
@@ -172,6 +187,9 @@ defmodule DDDElixir.CommandHandlerTest do
     }
 
     assert {:error, :seats_not_available} = CommandHandler.handle(command)
+
+    refute %SeatsReserved{aggregate_id: 1, seats: [1, 2], customer: 123} ==
+             EventStore.list_events() |> List.last()
   end
 
   test "cannot reserve later than 15 minutes before the show" do
@@ -191,6 +209,9 @@ defmodule DDDElixir.CommandHandlerTest do
     }
 
     assert {:error, :too_late} = CommandHandler.handle(command)
+
+    refute %SeatsReserved{aggregate_id: 1, seats: [1, 2], customer: 123} ==
+             EventStore.list_events() |> List.last()
   end
 
   defp given(events) do
